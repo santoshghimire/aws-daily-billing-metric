@@ -83,3 +83,40 @@ def get_metric_stats(
         reverse=True
     )
     return sorted_datapoints
+
+
+def upload_to_s3(file_name, path=None, conn=None):
+    if not conn:
+        s3_client = boto3.client('s3')
+    else:
+        s3_client = conn
+    if path:
+        full_path = os.path.join(path, file_name)
+    else:
+        full_path = file_name
+    s3_client.upload_file(
+        file_name, bucket_name, full_path.split('tmp/')[-1])
+    print(
+        'Uploaded file {0} to s3 !'.format(file_name.split('/')[-1]))
+
+
+def download_file(file_name, conn=None):
+    if not conn:
+        s3_client = boto3.client('s3')
+    else:
+        s3_client = conn
+    file_name = file_name.split('tmp/')[-1]
+
+    file_name_only = file_name.split('/')[-1]
+    file_name_only_len = len(file_name_only)
+    file_name_len = len(file_name)
+    file_dir = '/tmp/' + file_name[0:file_name_len - file_name_only_len]
+    if not os.path.exists(file_dir):
+        os.makedirs(file_dir)
+    try:
+        s3_client.download_file(
+            bucket_name, file_name, '/tmp/' + file_name)
+        return '/tmp/' + file_name
+    except:
+        print('Cannot download file', file_name)
+        return
