@@ -33,3 +33,53 @@ def lambda_handler(event, context):
     s3_full_path = os.path.join(s3_folder, filename)
     print(s3_full_path)
     return True
+
+
+def put_daily_billing_metric(client, value, timestamp):
+    # Put custom metrics
+    response = client.put_metric_data(
+        MetricData=[
+            {
+                'MetricName': 'Daily Charge',
+                'Dimensions': [
+                    {
+                        'Name': 'Currency',
+                        'Value': 'USD'
+                    },
+                ],
+                'Unit': 'None',
+                'StatisticValues': {
+                    'SampleCount': 1,
+                    'Sum': value,
+                    'Minimum': value,
+                    'Maximum': value
+                },
+                'Timestamp': timestamp
+            },
+        ],
+        Namespace='AWS/Billing'
+    )
+    try:
+        if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+            return True
+        else:
+            return False
+    except:
+        return False
+
+
+def get_metric_stats(
+    client, start_time, end_time, period=1800,
+    metric_name='Daily Charge'
+):
+    response = client.get_metric_statistics(
+        Namespace='AWS/Billing', MetricName=metric_name,
+        StartTime=start_time, EndTime=end_time, Period=period,
+        Dimensions=[{'Name': 'Currency', 'Value': 'USD'}],
+        Statistics=['Sum']
+    )
+    sorted_datapoints = sorted(
+        response['Datapoints'], key=lambda k: k['Timestamp'],
+        reverse=True
+    )
+    return sorted_datapoints
